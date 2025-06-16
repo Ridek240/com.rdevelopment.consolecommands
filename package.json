@@ -1,6 +1,6 @@
 {
   "name": "com.rdevelopment.consolecommands",
-  "version": "1.0.0",
+  "version": "0.0.5",
   "displayName": "Console Command System",
   "description": "System do uruchamiania komend z poziomu konsoli tekstowej.",
   "unity": "6000.0",
