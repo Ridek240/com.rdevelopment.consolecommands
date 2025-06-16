@@ -182,16 +182,7 @@ public class ComandLineUnityInit : MonoBehaviour
 
     }
 
-    private static void ConfirmCommandActivation(InputAction.CallbackContext context)
-    {
-        var result = CommandRegistry.Execute(CommandLine.text);
-        commands.Add(">>"+CommandLine.text);
-        commands.Add("<<"+result);
-        scrollRect.normalizedPosition = new Vector2(1,0);
-        output.text = string.Join("\n",commands.ToArray());
-        CommandLine.ActivateInputField();
-        CommandLine.Select();
-    }
+
 
     private static RectTransform CreateViewport(Transform parent)
     {
@@ -235,6 +226,18 @@ public class ComandLineUnityInit : MonoBehaviour
     {
         
         ConsoleSpace.SetActive(!ConsoleSpace.activeSelf);
+        CommandLine.ActivateInputField();
+        CommandLine.Select();
+    }
 
+    private static void ConfirmCommandActivation(InputAction.CallbackContext context)
+    {
+        var result = CommandRegistry.Execute(CommandLine.text);
+        commands.Add(">>" + CommandLine.text);
+        commands.Add("<<" + result);
+        scrollRect.normalizedPosition = new Vector2(1, 0);
+        output.text = string.Join("\n", commands.ToArray());
+        CommandLine.ActivateInputField();
+        CommandLine.Select();
     }
 }
