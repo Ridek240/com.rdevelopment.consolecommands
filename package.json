@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "displayName": "Console Command System",
   "description": "System do uruchamiania komend z poziomu konsoli tekstowej.",
-  "unity": "6000.0.34f",
+  "unity": "6000.0",
   "author": {
     "name": "Ridek240",
     "url": "https://github.com/Ridek240"
