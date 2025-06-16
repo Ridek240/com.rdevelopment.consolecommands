@@ -23,9 +23,13 @@ public class CommandRegistry
     private static void LoadCommands()
     {
         _commands.Clear();
+        LoadCommandFromClass(typeof(BasicCommands)); 
+        LoadCommandFromClass(typeof(CommandRegistry)); 
         foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
         {
-            if (!assembly.FullName.StartsWith("Assembly-CSharp")) continue;
+            string asmName = assembly.GetName().Name;
+            if (asmName != "Assembly-CSharp" && asmName != "com.rdevelopment.consolecommands.Runtime")
+                continue;
             foreach (var type in assembly.GetTypes())
             {
                 if (type.IsAbstract || type.IsGenericType) continue;
@@ -54,7 +58,28 @@ public class CommandRegistry
         }
         Debug.Log($"Zarejestrowano {_commands.Count} komend.");
     }
+    private static void LoadCommandFromClass(Type type)
+    {
+        var methods = type.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly);
+        foreach (var method in methods)
+        {
+            var attr = method.GetCustomAttribute<CommandAttribute>();
+            if (attr == null) continue;
 
+            var commandName = attr.Name.ToLower();
+
+            if (_commands.ContainsKey(commandName))
+            {
+                Debug.LogWarning($"Komenda '{commandName}' ju¿ zarejestrowana — nadpisano.");
+            }
+            var instance = type.GetProperties(BindingFlags.Public | BindingFlags.Static).FirstOrDefault(p => p.PropertyType == type);
+            if (!_commands.ContainsKey(commandName))
+                _commands[commandName] = new List<(MethodInfo method, Type declaringType, object target)>();
+
+            _commands[commandName].Add((method, type, instance));
+
+        }
+    }
     public static string Execute(string input)
     {
         var parts = input.Split(' ', StringSplitOptions.RemoveEmptyEntries);

@@ -7,5 +7,9 @@
   "author": {
     "name": "Ridek240",
     "url": "https://github.com/Ridek240"
+  },
+  "dependencies": {
+    "com.unity.textmeshpro": "3.0.6",
+    "com.unity.inputsystem": "1.11.2"
   }
 }
