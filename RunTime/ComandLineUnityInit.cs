@@ -5,10 +5,10 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
+using ConsoleCommands;
 
 public class ComandLineUnityInit : MonoBehaviour
 {
-
 
     static ScrollRect scrollRect;
     static RectTransform contentRect;
@@ -17,17 +17,6 @@ public class ComandLineUnityInit : MonoBehaviour
     static TMP_InputField CommandLine;
     static TextMeshProUGUI output;
     static List<string> commands = new List<string>();
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
-    {
-        
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
 
     private static InputActionMap customMap;
     private static InputAction confirmAction;
@@ -58,11 +47,12 @@ public class ComandLineUnityInit : MonoBehaviour
         canvasGO.AddComponent<GraphicRaycaster>();
 
         // === EventSystem (potrzebny dla InputField) ===
-        if (FindObjectOfType<UnityEngine.EventSystems.EventSystem>() == null)
+
+        if (FindObjectsByType(typeof(UnityEngine.EventSystems.EventSystem), FindObjectsSortMode.None).Length == 0)
         {
             GameObject eventSystem = new GameObject("EventSystem");
             eventSystem.AddComponent<UnityEngine.EventSystems.EventSystem>();
-            eventSystem.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
+            eventSystem.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
         }
 
         // === InputField (TextMeshPro) ===
@@ -74,9 +64,6 @@ public class ComandLineUnityInit : MonoBehaviour
         inputRT.pivot = new Vector2(0.5f,1);
         inputRT.offsetMin = new Vector2(0,-40);
         inputRT.offsetMax = Vector2.zero;
-        //inputRT.sizeDelta = new Vector2(300, 40);
-        //inputRT.anchoredPosition = new Vector2(0, 50);
-        //inputRT.localScale = Vector3.one;
 
         TMP_InputField inputField = inputGO.AddComponent<TMP_InputField>();
         inputField.textViewport = CreateViewport(inputGO.transform);
@@ -86,29 +73,6 @@ public class ComandLineUnityInit : MonoBehaviour
         inputImage.color = Color.white;
         inputField.targetGraphic = inputImage;
 
-
-        // === Text ===
-        /*
-        GameObject textGO = new GameObject("OutputText");
-        textGO.transform.SetParent(canvasGO.transform);
-        RectTransform textRT = textGO.AddComponent<RectTransform>();
-        textRT.sizeDelta = new Vector2(400, 40);
-        textRT.anchoredPosition = new Vector2(0, -50);
-        textRT.anchorMin = Vector2.zero;
-        textRT.anchorMax = Vector2.one;
-        textRT.offsetMin = Vector2.zero;
-        textRT.offsetMax = new Vector2(0, -50);
-
-        //textRT.localScale = Vector3.one;
-
-        TextMeshProUGUI outputText = textGO.AddComponent<TextMeshProUGUI>();
-        outputText.text = "Wynik:";
-        outputText.fontSize = 18;
-        outputText.alignment = TextAlignmentOptions.TopLeft;
-        output = outputText;
-
-        */
-        // Stwórz ScrollRect GameObject
         GameObject scrollGO = new GameObject("ConsoleScrollRect", typeof(RectTransform));
         scrollGO.AddComponent<RectMask2D>();
         scrollGO.transform.SetParent(canvas.transform);
@@ -120,14 +84,12 @@ public class ComandLineUnityInit : MonoBehaviour
         scrollRectTransform.offsetMin = Vector2.zero;
         scrollRectTransform.offsetMax = new Vector2(0, -50);
 
-        // Dodaj ScrollRect i Image do ScrollRect (t³o)
         scrollRect = scrollGO.AddComponent<ScrollRect>();
         Image scrollImage = scrollGO.AddComponent<Image>();
         scrollImage.color = new Color(0, 0, 0, 0.8f); // lekko czarne t³o
 
         scrollRect.horizontal = false;
 
-        // Stwórz Content (container na tekst)
         GameObject contentGO = new GameObject("Content", typeof(RectTransform));
         contentGO.transform.SetParent(scrollGO.transform);
         contentRect = contentGO.GetComponent<RectTransform>();
@@ -137,7 +99,6 @@ public class ComandLineUnityInit : MonoBehaviour
         contentRect.offsetMin = Vector2.zero;
         contentRect.offsetMax = Vector2.zero;
 
-        // Dodaj layout grupê i ContentSizeFitter do Content
         VerticalLayoutGroup layoutGroup = contentGO.AddComponent<VerticalLayoutGroup>();
         layoutGroup.childForceExpandHeight = false;
         layoutGroup.childForceExpandWidth = true;
@@ -150,19 +111,19 @@ public class ComandLineUnityInit : MonoBehaviour
 
         scrollRect.content = contentRect;
 
-        // Stwórz TextMeshPro obiekt dla outputText
         GameObject textGO = new GameObject("OutputText", typeof(RectTransform));
         textGO.transform.SetParent(contentGO.transform);
         RectTransform textRect = textGO.GetComponent<RectTransform>();
         textRect.anchorMin = new Vector2(0, 1);
         textRect.anchorMax = new Vector2(1, 1);
         textRect.pivot = new Vector2(0.5f, 1);
-        textRect.sizeDelta = new Vector2(0, 30);  // wysokoœæ pojedynczej linii
+        textRect.sizeDelta = new Vector2(0, 30);
 
         output = textGO.AddComponent<TextMeshProUGUI>();
         output.fontSize = 18;
-        output.enableWordWrapping = true;
-        output.overflowMode = TMPro.TextOverflowModes.Truncate;
+        
+        output.textWrappingMode = TextWrappingModes.Normal;
+        output.overflowMode = TextOverflowModes.Truncate;
         output.text = "";
 
         // Stwórz Scrollbar po lewej stronie
@@ -217,12 +178,7 @@ public class ComandLineUnityInit : MonoBehaviour
 
 
         ConsoleSpace.SetActive(false);
-        // === Obs³uga wpisania tekstu ===
-        /*
-        inputField.onValueChanged.AddListener((value) =>
-        {
-            outputText.text = "Wynik: " + value;
-        });*/
+
 
     }
 

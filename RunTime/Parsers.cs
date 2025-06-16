@@ -4,31 +4,36 @@ using System.Globalization;
 using UnityEditor;
 using UnityEngine;
 
-public class Parsers
+
+namespace ConsoleCommands.Parser
 {
-    public static readonly List<IArgumentParser> _parsers = new()
+    public class Parsers
+    {
+        public static readonly List<IArgumentParser> _parsers = new()
     {
         new PrimitiveParser(),
         new GameObjectParser(),
         new BoolParser(),
         new Vector3Parser(),
-        new Vector2Parser()
+        new Vector2Parser(),
+        new TransformParser(),
+        new RectTransformParser()
     };
 
-    public static object Parse(string input, Type type)
-    {
-        foreach (var parser in _parsers)
+        public static object Parse(string input, Type type)
         {
-            if (parser.CanParse(type))
-                return parser.Parse(input, type);
+            foreach (var parser in _parsers)
+            {
+                if (parser.CanParse(type))
+                    return parser.Parse(input, type);
+            }
+
+            throw new Exception($"There is no parser for {type.Name}");
         }
-
-        throw new Exception($"Brak parsera dla typu {type.Name}");
     }
-}
 
 
-public interface IArgumentParser
+    public interface IArgumentParser
     {
         public bool CanParse(Type type);
         public object Parse(string input, Type targetType);
@@ -56,20 +61,20 @@ public interface IArgumentParser
     {
         public bool CanParse(Type type) => type == typeof(GameObject);
 
-    public object Parse(string input, Type _)
-    {
-        var allObjects = UnityEngine.Object.FindObjectsByType(typeof(GameObject), FindObjectsSortMode.None);
-
-        foreach (var obj in allObjects)
+        public object Parse(string input, Type _)
         {
-            if (obj.name.Replace(' ', '_') == input)
-            {
-                return obj;
-            }
-        }
+            var allObjects = UnityEngine.Object.FindObjectsByType(typeof(GameObject), FindObjectsSortMode.None);
 
-        return null;
-    }
+            foreach (var obj in allObjects)
+            {
+                if (obj.name.Replace(' ', '_') == input)
+                {
+                    return obj;
+                }
+            }
+
+            return null;
+        }
     }
 
     public class BoolParser : IArgumentParser
@@ -78,28 +83,50 @@ public interface IArgumentParser
 
         public object Parse(string input, Type _) => bool.Parse(input);
     }
-public class Vector3Parser : IArgumentParser
-{
-    public bool CanParse(Type type) => type == typeof(Vector3);
-
-    public object Parse(string input, Type targetType)
+    public class Vector3Parser : IArgumentParser
     {
-        var numbers = input.Split(',');
-        if (numbers.Length != 3) throw new Exception($"Vectro3 Wymaga 3 liczb");
+        public bool CanParse(Type type) => type == typeof(Vector3);
 
-        return new Vector3(float.Parse(numbers[0], CultureInfo.InvariantCulture), float.Parse(numbers[1], CultureInfo.InvariantCulture), float.Parse(numbers[2], CultureInfo.InvariantCulture));
+        public object Parse(string input, Type targetType)
+        {
+            var numbers = input.Split(',');
+            if (numbers.Length != 3) throw new Exception($"Vector3 requiers 3 numbers");
+
+            return new Vector3(float.Parse(numbers[0], CultureInfo.InvariantCulture), float.Parse(numbers[1], CultureInfo.InvariantCulture), float.Parse(numbers[2], CultureInfo.InvariantCulture));
+        }
+    }
+    public class Vector2Parser : IArgumentParser
+    {
+        public bool CanParse(Type type) => type == typeof(Vector2);
+
+        public object Parse(string input, Type targetType)
+        {
+            var numbers = input.Split(',');
+            if (numbers.Length != 2) throw new Exception($"Vector2 requiers 2 numbers");
+
+            return new Vector2(float.Parse(numbers[0], CultureInfo.InvariantCulture), float.Parse(numbers[1], CultureInfo.InvariantCulture));
+        }
+    }
+
+    public class TransformParser : IArgumentParser
+    {
+        public bool CanParse(Type type) => type == typeof(Transform);
+
+        public object Parse(string input, Type targetType)
+        {
+            return CommandRegistry.FindObjectByNameAndType(typeof(Transform), input);
+        }
+    }
+
+    public class RectTransformParser : IArgumentParser
+    {
+        public bool CanParse(Type type) => type == typeof(RectTransform);
+
+        public object Parse(string input, Type targetType)
+        {
+            return CommandRegistry.FindObjectByNameAndType(typeof(RectTransform), input);
+        }
     }
 }
-public class Vector2Parser : IArgumentParser
-{
-    public bool CanParse(Type type) => type == typeof(Vector2);
 
-    public object Parse(string input, Type targetType)
-    {
-        var numbers = input.Split(',');
-        if (numbers.Length != 2) throw new Exception($"Vector2 Wymaga 2 liczb");
-
-        return new Vector2(float.Parse(numbers[0], CultureInfo.InvariantCulture), float.Parse(numbers[1], CultureInfo.InvariantCulture));
-    }
-}
 

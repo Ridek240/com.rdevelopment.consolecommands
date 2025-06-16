@@ -3,211 +3,244 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using UnityEngine;
+using ConsoleCommands.Parser;
+using ConsoleCommands.Commands;
+using System.Text;
+
 
 public class CommandAttribute : Attribute
 {
     public string Name { get; }
+    public string Description { get; }
 
     public CommandAttribute(string name)
     {
         Name = name;
     }
+    public CommandAttribute(string name, string description)
+    {
+        Name = name;
+        Description = description;
+    }
 }
 
-
-public class CommandRegistry
+namespace ConsoleCommands
 {
-    private static readonly Dictionary<string, List<(MethodInfo method, Type declaringType, object target)>> _commands = new();
 
-    [RuntimeInitializeOnLoadMethod]
-    private static void LoadCommands()
+
+    public class CommandRegistry
     {
-        _commands.Clear();
-        LoadCommandFromClass(typeof(BasicCommands)); 
-        LoadCommandFromClass(typeof(CommandRegistry)); 
-        foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+        private static readonly Dictionary<string, List<(MethodInfo method, Type declaringType, object target)>> _commands = new();
+
+        [RuntimeInitializeOnLoadMethod]
+        private static void LoadCommands()
         {
-            string asmName = assembly.GetName().Name;
-            if (asmName != "Assembly-CSharp" && asmName != "com.rdevelopment.consolecommands.Runtime")
-                continue;
-            foreach (var type in assembly.GetTypes())
+            _commands.Clear();
+            LoadCommandFromClass(typeof(BasicCommands));
+            LoadCommandFromClass(typeof(CommandRegistry));
+            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
             {
-                if (type.IsAbstract || type.IsGenericType) continue;
-
-                var methods = type.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly);
-                foreach (var method in methods)
+                string asmName = assembly.GetName().Name;
+                if (asmName != "Assembly-CSharp" && asmName != "com.rdevelopment.consolecommands.Runtime")
+                    continue;
+                foreach (var type in assembly.GetTypes())
                 {
-                    var attr = method.GetCustomAttribute<CommandAttribute>();
-                    if (attr == null) continue;
+                    if (type.IsAbstract || type.IsGenericType) continue;
 
-                    var commandName = attr.Name.ToLower();
-
-                    if (_commands.ContainsKey(commandName))
+                    var methods = type.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly);
+                    foreach (var method in methods)
                     {
-                        Debug.LogWarning($"Komenda '{commandName}' ju¿ zarejestrowana — nadpisano.");
+                        var attr = method.GetCustomAttribute<CommandAttribute>();
+                        if (attr == null) continue;
+
+                        var commandName = attr.Name.ToLower();
+
+                        var instance = type.GetProperties(BindingFlags.Public | BindingFlags.Static).FirstOrDefault(p => p.PropertyType == type);
+                        if (!_commands.ContainsKey(commandName))
+                            _commands[commandName] = new List<(MethodInfo method, Type declaringType, object target)>();
+
+                        _commands[commandName].Add((method, type, instance));
+
                     }
-                    var instance = type.GetProperties(BindingFlags.Public | BindingFlags.Static).FirstOrDefault(p => p.PropertyType == type);
-                    if (!_commands.ContainsKey(commandName))
-                        _commands[commandName] = new List<(MethodInfo method, Type declaringType, object target)>();
-
-                    _commands[commandName].Add((method, type, instance));
-
-                    //_commands[commandName] = (method, type, instance);
                 }
             }
+            Debug.Log($"{_commands.Count} commends in assebly detected.");
         }
-        Debug.Log($"Zarejestrowano {_commands.Count} komend.");
-    }
-    private static void LoadCommandFromClass(Type type)
-    {
-        var methods = type.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly);
-        foreach (var method in methods)
+        private static void LoadCommandFromClass(Type type)
         {
-            var attr = method.GetCustomAttribute<CommandAttribute>();
-            if (attr == null) continue;
-
-            var commandName = attr.Name.ToLower();
-
-            if (_commands.ContainsKey(commandName))
+            var methods = type.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly);
+            foreach (var method in methods)
             {
-                Debug.LogWarning($"Komenda '{commandName}' ju¿ zarejestrowana — nadpisano.");
+                var attr = method.GetCustomAttribute<CommandAttribute>();
+                if (attr == null) continue;
+
+                var commandName = attr.Name.ToLower();
+
+                var instance = type.GetProperties(BindingFlags.Public | BindingFlags.Static).FirstOrDefault(p => p.PropertyType == type);
+                if (!_commands.ContainsKey(commandName))
+                    _commands[commandName] = new List<(MethodInfo method, Type declaringType, object target)>();
+
+                _commands[commandName].Add((method, type, instance));
+
             }
-            var instance = type.GetProperties(BindingFlags.Public | BindingFlags.Static).FirstOrDefault(p => p.PropertyType == type);
-            if (!_commands.ContainsKey(commandName))
-                _commands[commandName] = new List<(MethodInfo method, Type declaringType, object target)>();
-
-            _commands[commandName].Add((method, type, instance));
-
         }
-    }
-    public static string Execute(string input)
-    {
-        var parts = input.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length == 0) return "Komeda jest za krótka";
-
-        var commandName = parts[0].ToLower();
-        var args = parts.Skip(1).ToArray();
-
-        if (_commands.TryGetValue(commandName, out var entry))
+        public static string Execute(string input)
         {
+            var parts = SmartSplit(input);
+            if (parts.Length == 0) return "Command is too short";
 
+            var commandName = parts[0].ToLower();
+            var args = parts.Skip(1).ToArray();
 
-            foreach (var element in entry)
+            for(var i = 0; i < args.Length; i++)
             {
+                args[i] = args[i].Replace("{","");
+                args[i] = args[i].Replace("}","");
+            }
 
-                var (method, type, target) = element;
-                var parameters = method.GetParameters();
-                object methotTarget = null;
-                if(target is PropertyInfo property)
+            if (_commands.TryGetValue(commandName, out var entry))
+            {
+                foreach (var element in entry)
                 {
-                    methotTarget = property.GetValue(null);
-                }
-                if (!method.IsStatic && methotTarget == null)
-                {
-                    methotTarget = FindObjectByNameAndType(type, args[0]);
-                    if (methotTarget == null)
+                    var (method, type, target) = element;
+                    var parameters = method.GetParameters();
+                    object methotTarget = null;
+                    if (target is PropertyInfo property)
+                    {
+                        methotTarget = property.GetValue(null);
+                    }
+                    if (!method.IsStatic && methotTarget == null)
+                    {
+                        methotTarget = FindObjectByNameAndType(type, args[0]);
+                        if (methotTarget == null)
+                        {
+                            continue;
+                        }
+                        args = args.Skip(1).ToArray();
+                    }
+                    if (parameters.Length != args.Length)
                     {
                         continue;
-                        //return $"Target object {args[0]} do not exist. This Command Requers targetObject";
                     }
-                    args = args.Skip(1).ToArray();
-                }
-                if (parameters.Length != args.Length)
-                {
-                    continue;
-                    //return "Nieprawid³owa liczba argumentów.";
-
-                }
-                try
-                {
-                    object[] parsedArgs = new object[args.Length];
-                    for (int i = 0; i < args.Length; i++)
+                    try
                     {
-                        var paramType = parameters[i].ParameterType;
-                        parsedArgs[i] = Parsers.Parse(args[i], paramType);
+                        object[] parsedArgs = new object[args.Length];
+                        for (int i = 0; i < args.Length; i++)
+                        {
+                            var paramType = parameters[i].ParameterType;
+                            parsedArgs[i] = Parsers.Parse(args[i], paramType);
+                        }
+
+                        return InvokeCommand(input, method, methotTarget, parsedArgs);
                     }
-
-                    return InvokeCommand(input, method, methotTarget, parsedArgs);
+                    catch { continue; }
                 }
-                catch { continue; }
-
-
+                return "There is no command that meets the requirements";
             }
-            return "Nie znalezionio przeci¹rzenia";
-
-            //return method.Invoke(target, parsedArgs).ToString();
-        }
-        else
-        {
-            return "Nieznana komenda.";
-        }
-    }
-
-    private static string InvokeCommand(string input, MethodInfo method, object methotTarget, object[] parsedArgs)
-    {
-        try
-        {
-
-            var result = method.Invoke(methotTarget, parsedArgs);
-            if (method.ReturnType != typeof(void))
+            else
             {
-                return $"Wynik komendy '{input}': {result}";
+                return "Unnown command.";
             }
-            return "Complete";
         }
-        catch (TargetInvocationException tie)
-        {
-            Debug.LogError($"B³¹d podczas wykonywania komendy '{input}': {tie.InnerException?.Message}");
-            Debug.LogException(tie.InnerException ?? tie);
-            return $"B³¹d podczas wykonywania komendy '{input}': {tie.InnerException?.Message}";
-        }
-        catch (Exception ex)
-        {
-            Debug.LogError($"B³¹d systemu komend: {ex.Message}");
-            Debug.LogException(ex);
-            return $"B³¹d systemu komend: {ex.Message}";
-        }
-    }
 
-    public static UnityEngine.Object FindObjectByNameAndType(Type type, string objectName)
-    {
-        var allObjects = UnityEngine.Object.FindObjectsByType(type, FindObjectsSortMode.None);
-        
-        foreach (var obj in allObjects)
+        public static string[] SmartSplit(string input)
         {
-            if (((Component)obj).gameObject.name.Replace(' ', '_') == objectName)
+            var result = new List<string>();
+            var current = new StringBuilder();
+            bool insideBraces = false;
+
+            foreach (char c in input)
             {
-                return obj;
+                if (c == '{')
+                {
+                    insideBraces = true;
+                    current.Append(c);
+                }
+                else if (c == '}')
+                {
+                    insideBraces = false;
+                    current.Append(c);
+                }
+                else if (char.IsWhiteSpace(c) && !insideBraces)
+                {
+                    if (current.Length > 0)
+                    {
+                        result.Add(current.ToString());
+                        current.Clear();
+                    }
+                }
+                else
+                {
+                    current.Append(c);
+                }
             }
+            if (current.Length > 0)
+                result.Add(current.ToString());
+            return result.ToArray();
         }
-
-        return null;
-    }
-    [Command("Help")]
-    public static string Help()
-    {
-        List<string> commands = new List<string>();
-        foreach (var entry in _commands)
+        private static string InvokeCommand(string input, MethodInfo method, object methotTarget, object[] parsedArgs)
         {
-            string commandName = entry.Key;
-
-            foreach (var arg in entry.Value)
+            try
             {
-
-
-                MethodInfo method = arg.method;
-                ParameterInfo[] parameters = method.GetParameters();
-
-                // Przygotuj listê argumentów w formacie: "arg1:Type, arg2:Type"
-                string args = string.Join(", ", parameters.Select(p => $"{p.Name}:{p.ParameterType.Name}"));
-
-                bool needsTarget = arg.target == null && !arg.method.IsStatic;
-                string targetHint = needsTarget ? "Target:Name " : "";
-
-                commands.Add($"{commandName} {targetHint}{args}");
+                var result = method.Invoke(methotTarget, parsedArgs);
+                if (method.ReturnType != typeof(void))
+                {
+                    return $"Result '{input}': {result}";
+                }
+                return "Complete";
+            }
+            catch (TargetInvocationException tie)
+            {
+                Debug.LogError($"Error During Command Execution '{input}': {tie.InnerException?.Message}");
+                Debug.LogException(tie.InnerException ?? tie);
+                return $"Error During Command Execution '{input}': {tie.InnerException?.Message}";
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"Command system error: {ex.Message}");
+                Debug.LogException(ex);
+                return $"Command system error: {ex.Message}";
             }
         }
-        return "\n"+string.Join("\n", commands.ToArray());
-    }
 
+        public static UnityEngine.Object FindObjectByNameAndType(Type type, string objectName)
+        {
+            var allObjects = UnityEngine.Object.FindObjectsByType(type, FindObjectsSortMode.None);
+
+            foreach (var obj in allObjects)
+            {
+                if (((Component)obj).gameObject.name.Replace(' ', '_') == objectName)
+                {
+                    return obj;
+                }
+            }
+
+            return null;
+        }
+        [Command("Help")]
+        public static string Help()
+        {
+            List<string> commands = new List<string>();
+            foreach (var entry in _commands)
+            {
+                string commandName = entry.Key;
+
+                foreach (var arg in entry.Value)
+                {
+                    MethodInfo method = arg.method;
+                    ParameterInfo[] parameters = method.GetParameters();
+
+                    // Przygotuj listê argumentów w formacie: "arg1:Type, arg2:Type"
+                    string args = string.Join(", ", parameters.Select(p => $"{p.Name}:{p.ParameterType.Name}"));
+
+                    bool needsTarget = arg.target == null && !arg.method.IsStatic;
+                    string targetHint = needsTarget ? "Target:Name " : "";
+
+                    commands.Add($"{commandName} {targetHint}{args}");
+                }
+            }
+            return "\n" + string.Join("\n", commands.ToArray());
+        }
+
+    }
 }
