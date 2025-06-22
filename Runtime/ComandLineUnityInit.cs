@@ -5,6 +5,8 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
 using ConsoleCommands;
+using ConsoleCommands.DebugSystem;
+
 
 public class ComandLineUnityInit : MonoBehaviour
 {

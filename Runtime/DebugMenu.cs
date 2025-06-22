@@ -4,7 +4,7 @@ using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Controls;
 
 
-namespace ConsoleCommands.Debug
+namespace ConsoleCommands.DebugSystem
 {
     public class DebugMenu : MonoBehaviour
     {

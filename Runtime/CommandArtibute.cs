@@ -5,6 +5,7 @@ using System.Reflection;
 using UnityEngine;
 using ConsoleCommands.Parser;
 using ConsoleCommands.Commands;
+using ConsoleCommands.DebugSystem;
 using System.Text;
 
 
