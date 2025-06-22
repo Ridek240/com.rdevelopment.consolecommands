@@ -1,4 +1,3 @@
-using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using TMPro;
@@ -178,7 +177,15 @@ public class ComandLineUnityInit : MonoBehaviour
 
 
         ConsoleSpace.SetActive(false);
+        //ConsoleSpace.AddComponent<DebugMenu>();
 
+        GameObject DebugInfo = new GameObject("DebugInfo");
+        var cnavas = DebugInfo.AddComponent<Canvas>();
+        cnavas.renderMode = RenderMode.ScreenSpaceOverlay;
+        var text = DebugInfo.AddComponent<TextMeshProUGUI>();
+        var debugmenu = DebugInfo.AddComponent<DebugMenu>();
+        debugmenu.debugText = text;
+        cnavas.sortingOrder = -100;
 
     }
 

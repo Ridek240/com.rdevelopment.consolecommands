@@ -17,7 +17,8 @@ namespace ConsoleCommands.Parser
         new Vector3Parser(),
         new Vector2Parser(),
         new TransformParser(),
-        new RectTransformParser()
+        new RectTransformParser(),
+        new EnumParser()
     };
 
         public static object Parse(string input, Type type)
@@ -125,6 +126,19 @@ namespace ConsoleCommands.Parser
         public object Parse(string input, Type targetType)
         {
             return CommandRegistry.FindObjectByNameAndType(typeof(RectTransform), input);
+        }
+    }
+
+    public class EnumParser : IArgumentParser
+    {
+        public bool CanParse(Type type) => type.IsEnum;
+
+        public object Parse(string input, Type targetType)
+        {
+            if (!targetType.IsEnum)
+                throw new ArgumentException("Target type must be an enum.");
+
+            return Enum.Parse(targetType, input, ignoreCase: true);
         }
     }
 }

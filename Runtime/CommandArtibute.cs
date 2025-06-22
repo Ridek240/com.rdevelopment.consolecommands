@@ -38,6 +38,7 @@ namespace ConsoleCommands
             _commands.Clear();
             LoadCommandFromClass(typeof(BasicCommands));
             LoadCommandFromClass(typeof(CommandRegistry));
+            LoadCommandFromClass(typeof(DebugMenu));
             foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
             {
                 string asmName = assembly.GetName().Name;

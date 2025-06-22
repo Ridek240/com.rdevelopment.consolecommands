@@ -1,4 +1,7 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 using UnityEngine;
 
 
@@ -53,6 +56,71 @@ namespace ConsoleCommands.Commands
             Time.timeScale = 0f;
         }
         [Command("Modify", "Modifies values in component")]
-        public static void Modify(GameObject target, Type type, string fields) { }
+        public static void Modify(GameObject target, string type, string fields) 
+        {
+            Type t_type = FindTypeByName(type);
+            if(t_type == null)
+            {
+                throw new Exception($"{type} could not be found in the assebly");
+            }
+            if (target.TryGetComponent(t_type, out var obiect))
+            {
+                var fields_values = ParseFields(fields);
+                string message = "";
+                foreach (var field in fields_values)
+                {
+
+
+                    FieldInfo fieldinfo = t_type.GetField(field.Key, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+
+                    if (fieldinfo != null)
+                    {
+                        //var value = fieldinfo.GetValue(obiect);
+                        fieldinfo.SetValue(obiect, Parser.Parsers.Parse(field.Value, fieldinfo.FieldType));
+                    }
+                    else
+                    {
+                        message += $"{field.Key} do not exits in {t_type.Name} \n";
+                    }
+                }
+                if(message.Length > 0) 
+                {
+                    throw new Exception(message);
+                }
+            }
+            else
+            {
+                throw new Exception($"{target.name} does not have {t_type.Name}");
+            }
+        }
+
+        public static Dictionary<string, string> ParseFields(string input)
+        {
+            var result = new Dictionary<string, string>();
+            if (string.IsNullOrWhiteSpace(input)) return result;
+
+            // Rozdziel po przecinkach
+            var pairs = input.Split(',');
+
+            foreach (var pair in pairs)
+            {
+                var parts = pair.Split(':');
+                if (parts.Length != 2) continue;
+
+                var key = parts[0].Trim();
+                var value = parts[1].Trim();
+
+                result[key] = value;
+            }
+
+            return result;
+        }
+
+        private static Type FindTypeByName(string typeName)
+        {
+            return AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(assembly => assembly.GetTypes())
+                .FirstOrDefault(t => t.Name == typeName || t.FullName == typeName);
+        }
     }
 }
