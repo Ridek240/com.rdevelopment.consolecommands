@@ -1,6 +1,6 @@
 {
   "name": "com.rdevelopment.consolecommands",
-  "version": "0.0.10",
+  "version": "0.0.11",
   "displayName": "Console Command System",
   "description": "Universal console for testing.",
   "unity": "6000.0",
