@@ -196,8 +196,6 @@ namespace ConsoleCommands.DebugSystem
 
         }
 
-
-
         private static RectTransform CreateViewport(Transform parent)
         {
             GameObject viewportGO = new GameObject("Viewport");
