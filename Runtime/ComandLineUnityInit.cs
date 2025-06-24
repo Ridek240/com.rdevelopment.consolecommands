@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using TMPro;
-using UnityEditor.VersionControl;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
@@ -25,30 +24,24 @@ namespace ConsoleCommands.DebugSystem
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         public static void Initialize()
         {
-
-            //customMap = new InputActionMap("Debug");
-            customMap = InputSystem.actions.FindActionMap("Debug", throwIfNotFound: false);
             if (customMap == null)
             {
                 customMap = new InputActionMap("Debug");
             }
 
-            // === Tworzymy akcjê Confirm ===
-
-            OpenAction = customMap.FindAction("Open", throwIfNotFound: false);
             if (OpenAction == null)
             {
                 OpenAction = customMap.AddAction("Open", InputActionType.Button);
                 OpenAction.AddBinding("<Keyboard>/backquote");
             }
 
-            // SprawdŸ, czy akcja "Confirm" ju¿ istnieje
-            confirmAction = customMap.FindAction("Confirm", throwIfNotFound: false);
             if (confirmAction == null)
             {
                 confirmAction = customMap.AddAction("Confirm", InputActionType.Button);
                 confirmAction.AddBinding("<Keyboard>/enter");
             }
+            OpenAction.performed -= ChangeConsoleActivation;
+            confirmAction.performed -= ConfirmCommandActivation;
 
             OpenAction.performed += ChangeConsoleActivation;
             confirmAction.performed += ConfirmCommandActivation;
@@ -59,6 +52,7 @@ namespace ConsoleCommands.DebugSystem
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvasGO.AddComponent<CanvasScaler>().uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             canvasGO.AddComponent<GraphicRaycaster>();
+            DontDestroyOnLoad(canvasGO);
 
             // === EventSystem (potrzebny dla InputField) ===
 
@@ -146,7 +140,7 @@ namespace ConsoleCommands.DebugSystem
 
             RectTransform scrollbarRect = scrollbarGO.GetComponent<RectTransform>();
             scrollbarRect.anchorMin = new Vector2(0.95f, 0f);
-            scrollbarRect.anchorMax = new Vector2(1f, 1f);  // 5% szerokoœci po lewej
+            scrollbarRect.anchorMax = new Vector2(1f, 1f);
             scrollbarRect.offsetMin = Vector2.zero;
             scrollbarRect.offsetMax = Vector2.zero;
 
@@ -192,7 +186,6 @@ namespace ConsoleCommands.DebugSystem
 
 
             ConsoleSpace.SetActive(false);
-            //ConsoleSpace.AddComponent<DebugMenu>();
 
             GameObject DebugInfo = new GameObject("DebugInfo");
             var cnavas = DebugInfo.AddComponent<Canvas>();
@@ -201,6 +194,7 @@ namespace ConsoleCommands.DebugSystem
             var debugmenu = DebugInfo.AddComponent<DebugMenu>();
             debugmenu.debugText = text;
             cnavas.sortingOrder = -100;
+            DontDestroyOnLoad(DebugInfo);
 
         }
 
@@ -246,10 +240,17 @@ namespace ConsoleCommands.DebugSystem
 
         private static void ChangeConsoleActivation(InputAction.CallbackContext obj)
         {
+            try
+            {
+                ConsoleSpace.SetActive(!ConsoleSpace.activeSelf);
+                CommandLine.ActivateInputField();
+                CommandLine.Select();
 
-            ConsoleSpace.SetActive(!ConsoleSpace.activeSelf);
-            CommandLine.ActivateInputField();
-            CommandLine.Select();
+            }
+            catch 
+            { 
+                Initialize();
+            }
         }
 
         private static void ConfirmCommandActivation(InputAction.CallbackContext context)
@@ -263,10 +264,6 @@ namespace ConsoleCommands.DebugSystem
             CommandLine.Select();
         }
 
-        private void OnDestroy()
-        {
-            OpenAction.performed -= ChangeConsoleActivation;
-            confirmAction.performed -= ConfirmCommandActivation;
-        }
+
     }
 }
