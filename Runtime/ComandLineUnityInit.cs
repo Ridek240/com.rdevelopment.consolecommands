@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using TMPro;
+using UnityEditor.VersionControl;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
@@ -25,15 +26,29 @@ namespace ConsoleCommands.DebugSystem
         public static void Initialize()
         {
 
-            customMap = new InputActionMap("Debug");
+            //customMap = new InputActionMap("Debug");
+            customMap = InputSystem.actions.FindActionMap("Debug", throwIfNotFound: false);
+            if (customMap == null)
+            {
+                customMap = new InputActionMap("Debug");
+            }
 
             // === Tworzymy akcjê Confirm ===
-            OpenAction = customMap.AddAction("Open", InputActionType.Button);
-            confirmAction = customMap.AddAction("Confirm", InputActionType.Button);
-            OpenAction.AddBinding("<Keyboard>/backquote");
-            confirmAction.AddBinding("<Keyboard>/enter");
 
+            OpenAction = customMap.FindAction("Open", throwIfNotFound: false);
+            if (OpenAction == null)
+            {
+                OpenAction = customMap.AddAction("Open", InputActionType.Button);
+                OpenAction.AddBinding("<Keyboard>/backquote");
+            }
 
+            // SprawdŸ, czy akcja "Confirm" ju¿ istnieje
+            confirmAction = customMap.FindAction("Confirm", throwIfNotFound: false);
+            if (confirmAction == null)
+            {
+                confirmAction = customMap.AddAction("Confirm", InputActionType.Button);
+                confirmAction.AddBinding("<Keyboard>/enter");
+            }
 
             OpenAction.performed += ChangeConsoleActivation;
             confirmAction.performed += ConfirmCommandActivation;
@@ -246,6 +261,12 @@ namespace ConsoleCommands.DebugSystem
             output.text = string.Join("\n", commands.ToArray());
             CommandLine.ActivateInputField();
             CommandLine.Select();
+        }
+
+        private void OnDestroy()
+        {
+            OpenAction.performed -= ChangeConsoleActivation;
+            confirmAction.performed -= ConfirmCommandActivation;
         }
     }
 }
