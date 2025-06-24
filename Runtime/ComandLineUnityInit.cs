@@ -8,7 +8,6 @@ namespace ConsoleCommands.DebugSystem
 {
     public class ComandLineUnityInit : MonoBehaviour
     {
-
         static ScrollRect scrollRect;
         static RectTransform contentRect;
         static Scrollbar scrollbar;
@@ -183,7 +182,6 @@ namespace ConsoleCommands.DebugSystem
 
             scrollRect.verticalScrollbar = scrollbar;
             scrollRect.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHideAndExpandViewport;
-
 
             ConsoleSpace.SetActive(false);
 
