@@ -44,8 +44,8 @@ namespace ConsoleCommands.DebugSystem
             string debugTextStr = "";
             if (FPScounter != State.OFF)
             {
-                float msec = Time.deltaTime * 1000.0f;
-                float fps = 1.0f / Time.deltaTime;
+                float msec = Time.unscaledDeltaTime * 1000.0f;
+                float fps = 1.0f / Time.unscaledDeltaTime;
                 debugTextStr = "FPS: " + fps.ToString("0.") + " (" + msec.ToString("0.0") + " ms)\n";
 
             }
